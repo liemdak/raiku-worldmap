@@ -15,7 +15,6 @@ function getDeviceId() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    initCursor();
     initMap();
     startListening();
     setupMobileMenu();
@@ -661,47 +660,6 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape')     { window.closeNavModal(); }
 });
 
-// ── Neon Ring Cursor (native cursor kept) ────────────────────────────────
-function initCursor() {
-    if (window.matchMedia('(pointer: coarse)').matches) return;
-
-    const ring = document.getElementById('cursor-ring');
-    if (!ring) return;
-
-    let mx = -200, my = -200;
-    let rx = -200, ry = -200;
-
-    function tick() {
-        // Ring follows with slight lerp lag for smooth feel
-        rx += (mx - rx) * 0.15;
-        ry += (my - ry) * 0.15;
-        ring.style.left = rx + 'px';
-        ring.style.top  = ry + 'px';
-        requestAnimationFrame(tick);
-    }
-
-    document.addEventListener('mousemove', (e) => {
-        mx = e.clientX;
-        my = e.clientY;
-    });
-
-    // Hover — ring tightens on interactive elements
-    const hoverSel = 'a, button, [onclick], .nav-item, .member-item, .bng-card, input, textarea, [contenteditable], label';
-    document.addEventListener('mouseover', (e) => {
-        if (e.target.closest(hoverSel)) document.body.classList.add('cursor-hover');
-    });
-    document.addEventListener('mouseout', (e) => {
-        if (e.target.closest(hoverSel)) document.body.classList.remove('cursor-hover');
-    });
-
-    document.addEventListener('mousedown', () => document.body.classList.add('cursor-click'));
-    document.addEventListener('mouseup',   () => document.body.classList.remove('cursor-click'));
-
-    document.addEventListener('mouseleave', () => { ring.style.opacity = '0'; });
-    document.addEventListener('mouseenter', () => { ring.style.opacity = '1'; });
-
-    tick();
-}
 
 function setupMobileMenu() {
     const hamburger = document.getElementById('hamburger-btn');
