@@ -15,6 +15,7 @@ function getDeviceId() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    initCursor();
     initMap();
     startListening();
     setupMobileMenu();
@@ -659,6 +660,96 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft')  { slideArticle(-1); e.preventDefault(); }
     if (e.key === 'Escape')     { window.closeNavModal(); }
 });
+
+// ── Neon Crosshair Cursor ──────────────────────────────────────────────────
+function initCursor() {
+    // Skip on touch devices — no hover cursor needed
+    if (window.matchMedia('(pointer: coarse)').matches) return;
+
+    const ring = document.getElementById('cursor-ring');
+    const dot  = document.getElementById('cursor-dot');
+    if (!ring || !dot) return;
+
+    // Trail pool — reuse DOM nodes
+    const TRAIL_COUNT = 6;
+    const trail = Array.from({ length: TRAIL_COUNT }, () => {
+        const el = document.createElement('div');
+        el.className = 'cursor-trail';
+        el.style.opacity = '0';
+        document.body.appendChild(el);
+        return el;
+    });
+
+    let mx = -200, my = -200;
+    let trailPos = Array(TRAIL_COUNT).fill({ x: -200, y: -200 });
+    let frame;
+
+    // Smooth lag for ring (slightly behind cursor)
+    let ringX = -200, ringY = -200;
+
+    function tick() {
+        // Dot snaps instantly
+        dot.style.left = mx + 'px';
+        dot.style.top  = my + 'px';
+
+        // Ring follows with slight lag
+        ringX += (mx - ringX) * 0.18;
+        ringY += (my - ringY) * 0.18;
+        ring.style.left = ringX + 'px';
+        ring.style.top  = ringY + 'px';
+
+        // Trail: each point chases the previous
+        const newPos = [{ x: mx, y: my }, ...trailPos.slice(0, TRAIL_COUNT - 1)];
+        trailPos = newPos;
+
+        trail.forEach((el, i) => {
+            const p = trailPos[i];
+            el.style.left    = p.x + 'px';
+            el.style.top     = p.y + 'px';
+            el.style.opacity = String((1 - i / TRAIL_COUNT) * 0.35);
+            const s = 4 - i * 0.4;
+            el.style.width   = s + 'px';
+            el.style.height  = s + 'px';
+        });
+
+        frame = requestAnimationFrame(tick);
+    }
+
+    document.addEventListener('mousemove', (e) => {
+        mx = e.clientX;
+        my = e.clientY;
+    });
+
+    // Hover: expand ring on interactive elements
+    const hoverSel = 'a, button, [onclick], .nav-item, .member-item, .bng-card, input, textarea, [contenteditable]';
+    document.addEventListener('mouseover', (e) => {
+        if (e.target.closest(hoverSel)) document.body.classList.add('cursor-hover');
+    });
+    document.addEventListener('mouseout', (e) => {
+        if (e.target.closest(hoverSel)) document.body.classList.remove('cursor-hover');
+    });
+
+    // Click pulse
+    document.addEventListener('mousedown', () => {
+        document.body.classList.add('cursor-click');
+    });
+    document.addEventListener('mouseup', () => {
+        document.body.classList.remove('cursor-click');
+    });
+
+    // Hide when mouse leaves window
+    document.addEventListener('mouseleave', () => {
+        ring.style.opacity = '0';
+        dot.style.opacity  = '0';
+        trail.forEach(el => { el.style.opacity = '0'; });
+    });
+    document.addEventListener('mouseenter', () => {
+        ring.style.opacity = '';
+        dot.style.opacity  = '';
+    });
+
+    tick();
+}
 
 function setupMobileMenu() {
     const hamburger = document.getElementById('hamburger-btn');
