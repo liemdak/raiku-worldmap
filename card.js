@@ -98,16 +98,23 @@ export async function downloadCard() {
     btn.textContent = 'SAVING...';
     btn.disabled = true;
 
-    // --- Prep: hide blinking _ cursors and freeze animations for clean capture ---
-    const patchStyle = document.createElement('style');
-    patchStyle.id = '__card-export-patch';
-    patchStyle.textContent = `
-        [contenteditable]::after { display: none !important; }
-        * { animation: none !important; transition: none !important; }
-    `;
-    document.head.appendChild(patchStyle);
+    // ── Step 1: collect all contenteditable fields, strip the attribute ──
+    // This is the only reliable way to kill the ::after '_' cursor in html2canvas
+    const editables = cardEl.querySelectorAll('[contenteditable]');
+    editables.forEach(el => el.removeAttribute('contenteditable'));
 
-    // Let the DOM settle one frame after removing animations
+    // ── Step 2: hide the action buttons bar (CLOSE / DOWNLOAD / SHARE) ──
+    const actionsBar = cardEl.querySelector('.card-actions');
+    const prevDisplay = actionsBar ? actionsBar.style.display : null;
+    if (actionsBar) actionsBar.style.display = 'none';
+
+    // ── Step 3: hide custom cursor elements ──
+    const cursorArrow = document.getElementById('cursor-arrow');
+    if (cursorArrow) cursorArrow.style.display = 'none';
+    const trailDots = document.querySelectorAll('.cursor-trail');
+    trailDots.forEach(el => el.style.display = 'none');
+
+    // Wait two frames for DOM to repaint cleanly
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
     try {
@@ -122,15 +129,18 @@ export async function downloadCard() {
             allowTaint: true,
             logging: false,
             onclone: (doc) => {
-                // Inside the clone: ensure cursor pseudo-elements are gone
-                const extra = doc.createElement('style');
-                extra.textContent = '[contenteditable]::after { display:none!important; }';
-                doc.head.appendChild(extra);
+                // Belt-and-suspenders: also nuke ::after in the clone
+                const s = doc.createElement('style');
+                s.textContent = `
+                    [contenteditable]::after { display:none!important; content:none!important; }
+                    .card-actions { display:none!important; }
+                `;
+                doc.head.appendChild(s);
             }
         });
 
         const link = document.createElement('a');
-        const name = document.getElementById('card-name').textContent.toLowerCase().replace(/\s/g, '-') || 'member';
+        const name = document.getElementById('card-name').textContent.trim().toLowerCase().replace(/\s+/g, '-') || 'member';
         link.download = `worldmap-card-${name}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
@@ -140,8 +150,12 @@ export async function downloadCard() {
         console.error(err);
         window.showToast('DOWNLOAD FAILED');
     } finally {
-        // Restore everything
-        document.getElementById('__card-export-patch')?.remove();
+        // ── Restore everything ──
+        editables.forEach(el => el.setAttribute('contenteditable', 'true'));
+        if (actionsBar) actionsBar.style.display = prevDisplay ?? '';
+        if (cursorArrow) cursorArrow.style.display = '';
+        trailDots.forEach(el => el.style.display = '');
+
         btn.textContent = 'DOWNLOAD ↓';
         btn.disabled = false;
     }
