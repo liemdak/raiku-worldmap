@@ -281,7 +281,7 @@ window.downloadCard = downloadCard;
 
 window.shareToX = function () {
     const country = window.selectedCountry || 'EARTH';
-    const text = encodeURIComponent(`I just activated a new node in ${country.toUpperCase()} on the Raiku World Network! 🌍\n\nJoin the grid: https://raiku.space`);
+    const text = encodeURIComponent(`I just activated a new node in ${country.toUpperCase()} on the Raiku World!\n\nJoin the grid: https://raikuworldmap.vercel.app/`);
     window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
 };
 
