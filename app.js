@@ -661,16 +661,15 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape')     { window.closeNavModal(); }
 });
 
-// ── Neon Crosshair Cursor ──────────────────────────────────────────────────
+// ── Neon Arrow Cursor ─────────────────────────────────────────────────────
 function initCursor() {
-    // Skip on touch devices — no hover cursor needed
+    // Skip on touch devices
     if (window.matchMedia('(pointer: coarse)').matches) return;
 
-    const ring = document.getElementById('cursor-ring');
-    const dot  = document.getElementById('cursor-dot');
-    if (!ring || !dot) return;
+    const arrow = document.getElementById('cursor-arrow');
+    if (!arrow) return;
 
-    // Trail pool — reuse DOM nodes
+    // Trail pool
     const TRAIL_COUNT = 6;
     const trail = Array.from({ length: TRAIL_COUNT }, () => {
         const el = document.createElement('div');
@@ -681,38 +680,33 @@ function initCursor() {
     });
 
     let mx = -200, my = -200;
-    let trailPos = Array(TRAIL_COUNT).fill({ x: -200, y: -200 });
-    let frame;
-
-    // Smooth lag for ring (slightly behind cursor)
-    let ringX = -200, ringY = -200;
+    // History of past positions for trail
+    const history = Array(TRAIL_COUNT + 1).fill(null).map(() => ({ x: -200, y: -200 }));
 
     function tick() {
-        // Dot snaps instantly
-        dot.style.left = mx + 'px';
-        dot.style.top  = my + 'px';
+        // Arrow tip snaps to exact cursor position (no offset — tip is at SVG 0,0)
+        arrow.style.transform = `translate(${mx}px, ${my}px)`;
 
-        // Ring follows with slight lag
-        ringX += (mx - ringX) * 0.18;
-        ringY += (my - ringY) * 0.18;
-        ring.style.left = ringX + 'px';
-        ring.style.top  = ringY + 'px';
+        // Shift history
+        for (let i = history.length - 1; i > 0; i--) {
+            history[i].x = history[i - 1].x;
+            history[i].y = history[i - 1].y;
+        }
+        history[0].x = mx;
+        history[0].y = my;
 
-        // Trail: each point chases the previous
-        const newPos = [{ x: mx, y: my }, ...trailPos.slice(0, TRAIL_COUNT - 1)];
-        trailPos = newPos;
-
+        // Place trail dots along history (skip [0] = current pos)
         trail.forEach((el, i) => {
-            const p = trailPos[i];
+            const p = history[i + 1];
             el.style.left    = p.x + 'px';
             el.style.top     = p.y + 'px';
-            el.style.opacity = String((1 - i / TRAIL_COUNT) * 0.35);
-            const s = 4 - i * 0.4;
-            el.style.width   = s + 'px';
-            el.style.height  = s + 'px';
+            el.style.opacity = String((1 - (i + 1) / (TRAIL_COUNT + 1)) * 0.4);
+            const s = Math.max(1.5, 4 - i * 0.45);
+            el.style.width  = s + 'px';
+            el.style.height = s + 'px';
         });
 
-        frame = requestAnimationFrame(tick);
+        requestAnimationFrame(tick);
     }
 
     document.addEventListener('mousemove', (e) => {
@@ -720,8 +714,8 @@ function initCursor() {
         my = e.clientY;
     });
 
-    // Hover: expand ring on interactive elements
-    const hoverSel = 'a, button, [onclick], .nav-item, .member-item, .bng-card, input, textarea, [contenteditable]';
+    // Hover glow on interactive elements
+    const hoverSel = 'a, button, [onclick], .nav-item, .member-item, .bng-card, input, textarea, [contenteditable], label';
     document.addEventListener('mouseover', (e) => {
         if (e.target.closest(hoverSel)) document.body.classList.add('cursor-hover');
     });
@@ -729,23 +723,17 @@ function initCursor() {
         if (e.target.closest(hoverSel)) document.body.classList.remove('cursor-hover');
     });
 
-    // Click pulse
-    document.addEventListener('mousedown', () => {
-        document.body.classList.add('cursor-click');
-    });
-    document.addEventListener('mouseup', () => {
-        document.body.classList.remove('cursor-click');
-    });
+    // Click shrink
+    document.addEventListener('mousedown', () => document.body.classList.add('cursor-click'));
+    document.addEventListener('mouseup',   () => document.body.classList.remove('cursor-click'));
 
-    // Hide when mouse leaves window
+    // Hide when leaving window
     document.addEventListener('mouseleave', () => {
-        ring.style.opacity = '0';
-        dot.style.opacity  = '0';
+        arrow.style.opacity = '0';
         trail.forEach(el => { el.style.opacity = '0'; });
     });
     document.addEventListener('mouseenter', () => {
-        ring.style.opacity = '';
-        dot.style.opacity  = '';
+        arrow.style.opacity = '1';
     });
 
     tick();
