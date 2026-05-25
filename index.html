@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WORLD MAP — COMMUNITY</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="https://raiku.space/favicon.ico" />
+
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <header id="header">
+        <div class="header-left">
+            <span class="logo">◈ RAIKU WORLDMAP</span>
+            <span class="version">v1.0</span>
+        </div>
+
+        <!-- Desktop nav -->
+        <nav class="header-center nav-links">
+            <span class="nav-item" onclick="openNavModal('OFFICIAL LINKS')">OFFICIAL LINKS</span>
+            <span class="nav-sep">/</span>
+            <span class="nav-item" onclick="openNavModal('DOCS')">DOCS</span>
+            <span class="nav-sep">/</span>
+            <span class="nav-item" onclick="openNavModal('BANGER ARTICLE')">BANGER ARTICLE</span>
+        </nav>
+
+        <div class="header-right">
+            <!-- Mobile hamburger — hidden on desktop -->
+            <button id="hamburger-btn" class="hamburger-btn" aria-label="Menu">&#9776;</button>
+            <span class="dot"></span>
+            <span id="online-count">TOTAL ACTIVE: 0</span>
+        </div>
+    </header>
+
+    <!-- Mobile nav dropdown -->
+    <div id="mobile-nav" class="mobile-nav hidden">
+        <span class="nav-item" onclick="openNavModal('OFFICIAL LINKS'); document.getElementById('mobile-nav').classList.add('hidden')">OFFICIAL LINKS</span>
+        <span class="nav-item" onclick="openNavModal('DOCS'); document.getElementById('mobile-nav').classList.add('hidden')">DOCS</span>
+        <span class="nav-item" onclick="openNavModal('BANGER ARTICLE'); document.getElementById('mobile-nav').classList.add('hidden')">BANGER ARTICLE</span>
+    </div>
+
+    <!-- MAIN LAYOUT -->
+    <main id="main">
+
+        <!-- MAP -->
+        <div id="map-wrapper">
+            <div id="map"></div>
+
+            <!-- Radar sweep overlay -->
+            <div class="radar-sweep" aria-hidden="true"></div>
+            <div class="radar-ping"  aria-hidden="true"></div>
+            <div class="radar-center" aria-hidden="true"></div>
+
+            <div id="map-hint">
+                <span id="map-hint-text"></span>
+            </div>
+
+            <div id="coord-bar">
+                <span id="coord-text">LAT: — LNG: —</span>
+            </div>
+        </div>
+
+        <!-- SIDEBAR -->
+        <aside id="sidebar">
+
+            <div class="sidebar-section">
+                <div class="section-title">// ACTIVE</div>
+
+                <div class="field-group">
+                    <label class="field-label">YOUR NAME</label>
+                    <input id="input-name" class="field-input" type="text" placeholder="e.g. dak" maxlength="20" />
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label">CITY</label>
+                    <input id="input-city" class="field-input" type="text" placeholder="e.g. cà mau" maxlength="30" />
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label">CONTACT <span class="optional">(optional)</span></label>
+                    <input id="input-contact" class="field-input" type="text" placeholder="@x or discord" maxlength="40" />
+                </div>
+
+                <div id="location-display" class="location-display hidden">
+                    <span class="loc-icon">◎</span>
+                    <span id="location-text">no location selected</span>
+                </div>
+
+                <div class="field-group">
+                    <button id="locate-btn" type="button" onclick="window.locateMe()" class="btn-locate">
+                        [ ⌖ LOCATE ME ]
+                    </button>
+                </div>
+
+                <button id="checkin-btn" class="btn-checkin" onclick="handleCheckin()">
+                    [ ACTIVE → ]
+                </button>
+
+                <button id="view-card-btn" class="btn-card hidden" onclick="window.viewMyCard()">
+                    [ 🎫 MY ID CARD ]
+                </button>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="section-title">// RECENT MEMBERS</div>
+                <div class="field-group">
+                    <input id="input-search" class="field-input search-input" type="text"
+                        placeholder="search name..." oninput="window.handleSearch()" />
+                </div>
+                <div id="members-list">
+                    <div class="loading-text">LOADING...</div>
+                </div>
+            </div>
+
+            <!-- Network stats bar -->
+            <div class="sidebar-section stats-section">
+                <div class="section-title">// NETWORK STATS</div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-nodes">—</div>
+                        <div class="stat-label">TOTAL NODES</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-countries">—</div>
+                        <div class="stat-label">COUNTRIES</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-active24">—</div>
+                        <div class="stat-label">ACTIVE 24H</div>
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+    </main>
+
+    <!-- ID CARD OVERLAY -->
+    <div id="card-overlay" class="hidden">
+        <div id="id-card">
+            <div class="card-header">
+                <span class="card-system">◈ RAIKU COMMUNITY WORLDMAP</span>
+                <button class="card-close" onclick="closeCard()">[ × CLOSE ]</button>
+            </div>
+
+            <div class="card-body">
+                <input type="file" id="avatar-input" accept="image/*" style="display:none" onchange="window.handleAvatar(event)">
+                <div style="display: flex; gap: 15px; margin-bottom: 12px; align-items: center;">
+                    <div class="avatar-upload" onclick="document.getElementById('avatar-input').click()">
+                        <img id="card-avatar" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0;">
+                        <span id="avatar-placeholder">+ PFP</span>
+                    </div>
+                    <div style="flex: 1;">
+                        <div class="card-label">ROLE ID</div>
+                        <div id="card-id" class="card-id-value" contenteditable="true" spellcheck="false">—</div>
+                        <div class="card-label">NAME</div>
+                        <div id="card-name" class="card-value" contenteditable="true" spellcheck="false">—</div>
+                    </div>
+                </div>
+
+                <div class="card-divider"></div>
+
+                <div class="card-row">
+                    <div>
+                        <div class="card-label">JOIN DATE</div>
+                        <div id="card-date" class="card-value" contenteditable="true" spellcheck="false">—</div>
+                    </div>
+                    <div>
+                        <div class="card-label">COUNTRY / LOC</div>
+                        <div id="card-location" class="card-value">—</div>
+                    </div>
+                </div>
+
+                <div class="card-row">
+                    <div>
+                        <div class="card-label">X USERNAME</div>
+                        <div id="card-x" class="card-value card-contact-val" contenteditable="true" spellcheck="false">@username</div>
+                    </div>
+                    <div>
+                        <div class="card-label">DISCORD</div>
+                        <div id="card-discord" class="card-value card-contact-val" contenteditable="true" spellcheck="false">user#0000</div>
+                    </div>
+                </div>
+
+                <div class="card-row">
+                    <div>
+                        <div class="card-label">STATUS</div>
+                        <div class="card-value card-active">◉ ACTIVE</div>
+                    </div>
+                </div>
+
+                <div class="card-barcode">
+                    <div class="barcode-inner"></div>
+                </div>
+
+                <div class="card-footer">THANK YOU FOR CUMING</div>
+            </div>
+
+            <div class="card-actions" data-html2canvas-ignore="true">
+                <button class="btn-secondary" onclick="window.closeCard()">CLOSE</button>
+                <button id="btn-download" class="btn-secondary" onclick="window.downloadCard()" style="border-right:none">DOWNLOAD ↓</button>
+                <button id="btn-share" class="btn-primary" onclick="window.shareToX()">𝕏 SHARE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NAV DROPDOWN PANEL -->
+    <div id="nav-modal-overlay" class="hidden" onclick="window.closeNavModal()">
+        <div id="nav-modal" onclick="event.stopPropagation()">
+
+            <!-- Top bar: path + status + close -->
+            <div class="nmd-bar">
+                <span class="nmd-path">
+                    <span class="nmd-prompt">&gt;_</span>
+                    ./raiku/<span id="nav-modal-name" class="nmd-module">—</span>
+                </span>
+                <span class="nmd-status-pill">● OFFLINE</span>
+                <button class="nmd-close" onclick="window.closeNavModal()">[ ESC ]</button>
+            </div>
+
+            <!-- Accent progress bar (decorative) -->
+            <div class="nmd-scanline"></div>
+
+            <!-- Body -->
+            <div class="nmd-body">
+                <span class="nmd-offline-msg">
+                    MODULE_NOT_FOUND &nbsp;·&nbsp; PLEASE CHECK BACK LATER
+                </span>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast" class="hidden"></div>
+
+    <!-- WATERMARK -->
+    <div class="watermark">Make by Dak</div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- App modules -->
+    <!-- App modules -->
+    <script type="module" src="firebase.js"></script>
+    <script type="module" src="map.js"></script>
+    <script type="module" src="card.js"></script>
+    <script type="module" src="app.js"></script>
+
+</body>
+
+</html>
