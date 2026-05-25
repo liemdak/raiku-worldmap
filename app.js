@@ -661,51 +661,22 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape')     { window.closeNavModal(); }
 });
 
-// ── Neon Arrow Cursor ─────────────────────────────────────────────────────
+// ── Neon Ring Cursor (native cursor kept) ────────────────────────────────
 function initCursor() {
-    // Skip on touch devices
     if (window.matchMedia('(pointer: coarse)').matches) return;
 
-    const arrow = document.getElementById('cursor-arrow');
-    if (!arrow) return;
-
-    // Trail pool
-    const TRAIL_COUNT = 6;
-    const trail = Array.from({ length: TRAIL_COUNT }, () => {
-        const el = document.createElement('div');
-        el.className = 'cursor-trail';
-        el.style.opacity = '0';
-        document.body.appendChild(el);
-        return el;
-    });
+    const ring = document.getElementById('cursor-ring');
+    if (!ring) return;
 
     let mx = -200, my = -200;
-    // History of past positions for trail
-    const history = Array(TRAIL_COUNT + 1).fill(null).map(() => ({ x: -200, y: -200 }));
+    let rx = -200, ry = -200;
 
     function tick() {
-        // Arrow tip snaps to exact cursor position (no offset — tip is at SVG 0,0)
-        arrow.style.transform = `translate(${mx}px, ${my}px)`;
-
-        // Shift history
-        for (let i = history.length - 1; i > 0; i--) {
-            history[i].x = history[i - 1].x;
-            history[i].y = history[i - 1].y;
-        }
-        history[0].x = mx;
-        history[0].y = my;
-
-        // Place trail dots along history (skip [0] = current pos)
-        trail.forEach((el, i) => {
-            const p = history[i + 1];
-            el.style.left    = p.x + 'px';
-            el.style.top     = p.y + 'px';
-            el.style.opacity = String((1 - (i + 1) / (TRAIL_COUNT + 1)) * 0.4);
-            const s = Math.max(1.5, 4 - i * 0.45);
-            el.style.width  = s + 'px';
-            el.style.height = s + 'px';
-        });
-
+        // Ring follows with slight lerp lag for smooth feel
+        rx += (mx - rx) * 0.15;
+        ry += (my - ry) * 0.15;
+        ring.style.left = rx + 'px';
+        ring.style.top  = ry + 'px';
         requestAnimationFrame(tick);
     }
 
@@ -714,7 +685,7 @@ function initCursor() {
         my = e.clientY;
     });
 
-    // Hover glow on interactive elements
+    // Hover — ring tightens on interactive elements
     const hoverSel = 'a, button, [onclick], .nav-item, .member-item, .bng-card, input, textarea, [contenteditable], label';
     document.addEventListener('mouseover', (e) => {
         if (e.target.closest(hoverSel)) document.body.classList.add('cursor-hover');
@@ -723,18 +694,11 @@ function initCursor() {
         if (e.target.closest(hoverSel)) document.body.classList.remove('cursor-hover');
     });
 
-    // Click shrink
     document.addEventListener('mousedown', () => document.body.classList.add('cursor-click'));
     document.addEventListener('mouseup',   () => document.body.classList.remove('cursor-click'));
 
-    // Hide when leaving window
-    document.addEventListener('mouseleave', () => {
-        arrow.style.opacity = '0';
-        trail.forEach(el => { el.style.opacity = '0'; });
-    });
-    document.addEventListener('mouseenter', () => {
-        arrow.style.opacity = '1';
-    });
+    document.addEventListener('mouseleave', () => { ring.style.opacity = '0'; });
+    document.addEventListener('mouseenter', () => { ring.style.opacity = '1'; });
 
     tick();
 }

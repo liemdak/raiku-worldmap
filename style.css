@@ -7,52 +7,36 @@
     padding: 0;
 }
 
-/* ===== CUSTOM NEON ARROW CURSOR ===== */
-*, *::before, *::after { cursor: none !important; }
-
-/* Arrow SVG — rendered via clip-path polygon (classic arrow shape) */
-#cursor-arrow {
+/* ===== NEON CURSOR RING (native cursor kept) ===== */
+#cursor-ring {
     position: fixed;
     pointer-events: none;
     z-index: 99999;
-    width: 20px;
-    height: 24px;
-    /* tip of arrow at top-left (0,0) — no offset needed */
-    left: 0;
-    top: 0;
-    will-change: transform;
-    filter: drop-shadow(0 0 4px var(--accent)) drop-shadow(0 0 10px var(--accent-glow));
-    transition: filter 0.1s ease, transform 0.08s ease;
-}
-
-#cursor-arrow svg {
-    width: 100%;
-    height: 100%;
-    display: block;
-}
-
-/* Trail dots */
-.cursor-trail {
-    position: fixed;
-    pointer-events: none;
-    z-index: 99998;
-    width: 4px;
-    height: 4px;
-    background: var(--accent);
+    width: 28px;
+    height: 28px;
+    border: 1.5px solid var(--accent);
     border-radius: 50%;
     transform: translate(-50%, -50%);
-    will-change: transform, opacity;
+    box-shadow: 0 0 6px var(--accent), 0 0 12px var(--accent-glow);
+    transition: width 0.15s ease, height 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    will-change: transform;
+    pointer-events: none;
 }
 
-/* Hover — brighter glow */
-body.cursor-hover #cursor-arrow {
-    filter: drop-shadow(0 0 6px var(--accent-light)) drop-shadow(0 0 16px var(--accent));
+/* Hover — ring shrinks tight around cursor */
+body.cursor-hover #cursor-ring {
+    width: 18px;
+    height: 18px;
+    border-color: var(--accent-light);
+    box-shadow: 0 0 10px var(--accent-light), 0 0 20px var(--accent);
 }
 
-/* Click — scale down slightly */
-body.cursor-click #cursor-arrow {
-    transform: scale(0.85);
-    filter: drop-shadow(0 0 10px var(--accent)) drop-shadow(0 0 24px var(--accent-glow));
+/* Click — quick flash */
+body.cursor-click #cursor-ring {
+    width: 14px;
+    height: 14px;
+    border-color: #fff;
+    box-shadow: 0 0 14px var(--accent), 0 0 28px var(--accent-glow);
 }
 
 :root {
