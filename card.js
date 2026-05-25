@@ -111,7 +111,43 @@ export async function downloadCard() {
     if (actionsBar) actionsBar.style.display = 'none';
     if (closeBtn)   closeBtn.style.display   = 'none';
 
-    // ── Step 3: hide custom cursor elements ──
+    // ── Step 3: replace CSS-gradient barcode with real <canvas> ──
+    // html2canvas cannot reliably render repeating-linear-gradient with CSS vars,
+    // so we draw the exact same stripe pattern onto a real canvas element.
+    const barcodeWrap  = cardEl.querySelector('.card-barcode');
+    const barcodeInner = cardEl.querySelector('.barcode-inner');
+    let barcodeCanvas  = null;
+    if (barcodeWrap && barcodeInner) {
+        const W = barcodeWrap.offsetWidth || 360;
+        const H = barcodeWrap.offsetHeight || 30;
+        barcodeCanvas = document.createElement('canvas');
+        barcodeCanvas.width  = W * 2;   // 2× for sharpness
+        barcodeCanvas.height = H * 2;
+        barcodeCanvas.style.cssText = `width:${W}px;height:${H}px;display:block;`;
+        const ctx = barcodeCanvas.getContext('2d');
+        // Stripe pattern matching CSS: #d6ff70 2px | gap 2px | #C0FF38 1px | gap 4px  (repeat 9px)
+        const stripes = [
+            { color: '#d6ff70', w: 4  },   // 2px × scale2
+            { color: null,      w: 4  },
+            { color: '#C0FF38', w: 2  },   // 1px × scale2
+            { color: null,      w: 8  },   // 4px × scale2
+        ];
+        let x = 0;
+        while (x < barcodeCanvas.width) {
+            for (const seg of stripes) {
+                if (seg.color) {
+                    ctx.fillStyle = seg.color;
+                    ctx.fillRect(x, 0, seg.w, barcodeCanvas.height);
+                }
+                x += seg.w;
+            }
+        }
+        // Swap out the inner div
+        barcodeInner.style.display = 'none';
+        barcodeWrap.appendChild(barcodeCanvas);
+    }
+
+    // ── Step 4: hide custom cursor elements ──
     const cursorArrow = document.getElementById('cursor-arrow');
     if (cursorArrow) cursorArrow.style.display = 'none';
     const trailDots = document.querySelectorAll('.cursor-trail');
@@ -132,18 +168,6 @@ export async function downloadCard() {
             allowTaint: true,
             logging: false,
             onclone: (doc) => {
-                // Replace CSS variables in barcode gradient (html2canvas can't resolve them)
-                const barcodeEl = doc.querySelector('.barcode-inner');
-                if (barcodeEl) {
-                    barcodeEl.style.background = `repeating-linear-gradient(
-                        90deg,
-                        #d6ff70 0px, #d6ff70 2px,
-                        transparent 2px, transparent 4px,
-                        #C0FF38 4px, #C0FF38 5px,
-                        transparent 5px, transparent 9px
-                    )`;
-                }
-                // Patch stylesheet: hide UI chrome, nuke cursors
                 const s = doc.createElement('style');
                 s.textContent = `
                     [contenteditable]::after { display:none!important; content:none!important; }
@@ -167,8 +191,10 @@ export async function downloadCard() {
     } finally {
         // ── Restore everything ──
         editables.forEach(el => el.setAttribute('contenteditable', 'true'));
-        if (actionsBar) actionsBar.style.display = prevActions ?? '';
-        if (closeBtn)   closeBtn.style.display   = prevClose   ?? '';
+        if (actionsBar)  actionsBar.style.display  = prevActions ?? '';
+        if (closeBtn)    closeBtn.style.display    = prevClose   ?? '';
+        if (barcodeCanvas) barcodeCanvas.remove();
+        if (barcodeInner)  barcodeInner.style.display = '';
         if (cursorArrow) cursorArrow.style.display = '';
         trailDots.forEach(el => el.style.display = '');
 
