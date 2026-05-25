@@ -103,10 +103,13 @@ export async function downloadCard() {
     const editables = cardEl.querySelectorAll('[contenteditable]');
     editables.forEach(el => el.removeAttribute('contenteditable'));
 
-    // ── Step 2: hide the action buttons bar (CLOSE / DOWNLOAD / SHARE) ──
-    const actionsBar = cardEl.querySelector('.card-actions');
-    const prevDisplay = actionsBar ? actionsBar.style.display : null;
+    // ── Step 2: hide the action buttons bar + close button in header ──
+    const actionsBar  = cardEl.querySelector('.card-actions');
+    const closeBtn    = cardEl.querySelector('.card-close');
+    const prevActions = actionsBar ? actionsBar.style.display : null;
+    const prevClose   = closeBtn   ? closeBtn.style.display   : null;
     if (actionsBar) actionsBar.style.display = 'none';
+    if (closeBtn)   closeBtn.style.display   = 'none';
 
     // ── Step 3: hide custom cursor elements ──
     const cursorArrow = document.getElementById('cursor-arrow');
@@ -129,11 +132,23 @@ export async function downloadCard() {
             allowTaint: true,
             logging: false,
             onclone: (doc) => {
-                // Belt-and-suspenders: also nuke ::after in the clone
+                // Replace CSS variables in barcode gradient (html2canvas can't resolve them)
+                const barcodeEl = doc.querySelector('.barcode-inner');
+                if (barcodeEl) {
+                    barcodeEl.style.background = `repeating-linear-gradient(
+                        90deg,
+                        #d6ff70 0px, #d6ff70 2px,
+                        transparent 2px, transparent 4px,
+                        #C0FF38 4px, #C0FF38 5px,
+                        transparent 5px, transparent 9px
+                    )`;
+                }
+                // Patch stylesheet: hide UI chrome, nuke cursors
                 const s = doc.createElement('style');
                 s.textContent = `
                     [contenteditable]::after { display:none!important; content:none!important; }
                     .card-actions { display:none!important; }
+                    .card-close   { display:none!important; }
                 `;
                 doc.head.appendChild(s);
             }
@@ -152,7 +167,8 @@ export async function downloadCard() {
     } finally {
         // ── Restore everything ──
         editables.forEach(el => el.setAttribute('contenteditable', 'true'));
-        if (actionsBar) actionsBar.style.display = prevDisplay ?? '';
+        if (actionsBar) actionsBar.style.display = prevActions ?? '';
+        if (closeBtn)   closeBtn.style.display   = prevClose   ?? '';
         if (cursorArrow) cursorArrow.style.display = '';
         trailDots.forEach(el => el.style.display = '');
 
