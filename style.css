@@ -918,6 +918,13 @@ body::after {
     border-bottom: 1px solid rgba(192,255,56,0.4);
 }
 
+/* Hide cursor when exporting card to PNG */
+.card-exporting [contenteditable]::after,
+.card-exporting [contenteditable]:not(:focus)::after {
+    display: none !important;
+    content: none !important;
+}
+
 .card-active {
     color: var(--green);
     text-shadow: 0 0 8px var(--green);

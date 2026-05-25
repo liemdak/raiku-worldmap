@@ -95,8 +95,20 @@ export async function downloadCard() {
     const cardEl = document.getElementById('id-card');
     const btn = document.getElementById('btn-download');
 
-    btn.textContent = '[ SAVING... ]';
+    btn.textContent = 'SAVING...';
     btn.disabled = true;
+
+    // --- Prep: hide blinking _ cursors and freeze animations for clean capture ---
+    const patchStyle = document.createElement('style');
+    patchStyle.id = '__card-export-patch';
+    patchStyle.textContent = `
+        [contenteditable]::after { display: none !important; }
+        * { animation: none !important; transition: none !important; }
+    `;
+    document.head.appendChild(patchStyle);
+
+    // Let the DOM settle one frame after removing animations
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
     try {
         if (!window.html2canvas) {
@@ -107,11 +119,18 @@ export async function downloadCard() {
             backgroundColor: '#05080d',
             scale: 2,
             useCORS: true,
-            logging: false
+            allowTaint: true,
+            logging: false,
+            onclone: (doc) => {
+                // Inside the clone: ensure cursor pseudo-elements are gone
+                const extra = doc.createElement('style');
+                extra.textContent = '[contenteditable]::after { display:none!important; }';
+                doc.head.appendChild(extra);
+            }
         });
 
         const link = document.createElement('a');
-        const name = document.getElementById('card-name').textContent.toLowerCase().replace(/\s/g, '-');
+        const name = document.getElementById('card-name').textContent.toLowerCase().replace(/\s/g, '-') || 'member';
         link.download = `worldmap-card-${name}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
@@ -121,7 +140,9 @@ export async function downloadCard() {
         console.error(err);
         window.showToast('DOWNLOAD FAILED');
     } finally {
-        btn.textContent = '[ DOWNLOAD ↓ ]';
+        // Restore everything
+        document.getElementById('__card-export-patch')?.remove();
+        btn.textContent = 'DOWNLOAD ↓';
         btn.disabled = false;
     }
 }
